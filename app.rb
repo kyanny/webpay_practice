@@ -1,4 +1,6 @@
 require 'webpay'
+require 'timecop'
+require 'active_support/time'
 
 def log(msg)
   puts "====== #{msg} ======"
@@ -70,6 +72,57 @@ begin
 rescue => e
   p e
 end
+
+log("kari uriage (capture=false)")
+charge = WebPay::Charge.create(
+  amount: 400,
+  currency: "jpy",
+  card: {
+    number: "4242-4242-4242-4242",
+    exp_month: "11",
+    exp_year: "2014",
+    cvc: "123",
+    name: "KEI KUBO"
+  },
+  capture: false,
+)
+p charge
+charge.capture
+p WebPay::Charge.retrieve(charge.id)
+
+log("capture expire date (not work because expire date is server timestamp)")
+charge = WebPay::Charge.create(
+  amount: 400,
+  currency: "jpy",
+  card: {
+    number: "4242-4242-4242-4242",
+    exp_month: "11",
+    exp_year: "2014",
+    cvc: "123",
+    name: "KEI KUBO"
+  },
+  capture: false,
+)
+Timecop.travel(8.days.ago) do
+  charge = WebPay::Charge.create(
+    amount: 400,
+    currency: "jpy",
+    card: {
+      number: "4242-4242-4242-4242",
+      exp_month: "11",
+      exp_year: "2014",
+      cvc: "123",
+      name: "KEI KUBO"
+    },
+    capture: false,
+  )
+end
+begin
+  p charge.capture
+rescue => e
+  p e # no error, timecop fake time cannot mock time
+end
+
 
 log("charge list")
 p WebPay::Charge.all
